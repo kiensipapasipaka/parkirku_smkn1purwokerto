@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ParkirKu - SMK Negeri 1 Purwokerto</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #eef7fb;
+    color: #17324d;
+  }
+  header {
+    background: linear-gradient(135deg, #0d3764, #17679b);
+    color: white;
+    padding: 24px 18px;
+  }
+  .wrap { max-width: 1000px; margin: auto; }
+  header h1 { margin: 0 0 6px; font-size: 30px; }
+  header p { margin: 0; opacity: .9; }
+  .hero {
+    background: white;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 18px;
+    box-shadow: 0 6px 20px #17324d18;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat {
+    padding: 16px;
+    border-radius: 14px;
+    background: #f4f9fc;
+    text-align: center;
+  }
+  .stat b { display:block; font-size: 27px; margin-top: 5px; }
+  .free b { color: #159447; }
+  .used b { color: #d83a3a; }
+  .total b { color: #17679b; }
+
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  input, select, button {
+    border: 1px solid #cbdbe6;
+    border-radius: 10px;
+    padding: 11px 13px;
+    font-size: 14px;
+  }
+  input, select { flex: 1; min-width: 170px; background: white; }
+  button {
+    background: #17679b;
+    color: white;
+    cursor: pointer;
+    border: none;
+    font-weight: bold;
+  }
+  button:hover { background: #0d4f7b; }
+
+  .legend {
+    display:flex;
+    gap: 18px;
+    flex-wrap:wrap;
+    margin-bottom: 15px;
+    font-size: 14px;
+  }
+  .dot {
+    display:inline-block; width:13px; height:13px; border-radius:50%;
+    margin-right:6px; vertical-align:-2px;
+  }
+  .green { background:#42bd70; }
+  .red { background:#e15a5a; }
+  .yellow { background:#e9b949; }
+
+  .parking-area {
+    background: #dce4e8;
+    border-radius: 16px;
+    padding: 18px;
+    overflow-x: auto;
+  }
+  .lane {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(68px, 1fr));
+    gap: 8px;
+    min-width: 760px;
+  }
+  .slot {
+    min-height: 76px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    font-weight:bold;
+    cursor:pointer;
+    transition:.15s;
+  }
+  .slot.free { background:#bff0ce; border-color:#42bd70; color:#126333; }
+  .slot.used { background:#f5bcbc; border-color:#e15a5a; color:#8d2525; }
+  .slot.selected { background:#ffe4a5; border-color:#e9b949; color:#765100; transform:scale(1.03); }
+  .slot small { font-weight:normal; margin-top:5px; }
+  .aisle {
+    min-width: 760px;
+    text-align:center;
+    padding: 13px;
+    font-weight:bold;
+    color:#536775;
+  }
+  .notice {
+    margin-top:18px;
+    padding:14px;
+    background:#fff8d8;
+    border-left:5px solid #e9b949;
+    border-radius:10px;
+  }
+  footer {
+    text-align:center;
+    padding: 18px;
+    color:#647989;
+    font-size:13px;
+  }
+
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+  }
+  .modal.show { display:flex; }
+  .modal-card {
+    width: min(380px, 100%);
+    background: white;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 15px 50px rgba(0,0,0,.25);
+  }
+  .modal-card h3 { margin:0 0 8px; }
+  .modal-card p { color:#607586; line-height:1.5; }
+  .modal-actions { display:flex; gap:10px; margin-top:15px; }
+  .modal-actions button { flex:1; }
+  .cancel-btn { background:#e8eef2; color:#17324d; }
+  .danger-btn { background:#c0392b; }
+  .danger-btn:hover { background:#a93226; }
+
+  @media (max-width: 600px) {
+    header h1 { font-size:24px; }
+    .stats { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>🅿️ ParkirKu</h1>
+    <p>Sistem sederhana untuk melihat slot parkir motor yang masih kosong</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <h2>Parkiran Motor SMK Negeri 1 Purwokerto</h2>
+    <p><b>Petunjuk:</b> Klik slot untuk mengubah statusnya. Slot kosong menjadi terisi, dan slot terisi dapat diklik lagi untuk mengosongkannya. Data parkir tersimpan otomatis untuk pemakaian setiap hari. Tombol Restart / Reset hanya dapat digunakan oleh penjaga parkir atau pemilik.</p>
+
+    <div class="stats">
+      <div class="stat total">Total Slot <b id="total">40</b></div>
+      <div class="stat free">Slot Kosong <b id="free">0</b></div>
+      <div class="stat used">Slot Terisi <b id="used">0</b></div>
+    </div>
+
+    <div class="toolbar">
+      <input id="search" type="text" placeholder="Cari nomor slot, contoh A12">
+      <select id="filter">
+        <option value="all">Semua slot</option>
+        <option value="free">Hanya kosong</option>
+        <option value="used">Hanya terisi</option>
+      </select>
+      <button onclick="randomize()">🔄 Simulasi kondisi parkir</button>
+      <button id="resetBtn" onclick="requestReset()" style="display:inline-block;">🔐 Restart / Reset</button>
+    </div>
+
+    <div class="legend">
+      <span><i class="dot green"></i>Kosong</span>
+      <span><i class="dot red"></i>Terisi</span>
+      <span>Klik slot untuk mengubah status kosong/terisi</span>
+    </div>
+
+    <div class="parking-area">
+      <div id="parking"></div>
+    </div>
+
+    
+    <div class="notice" style="background:#eaf4ff; border-left-color:#17679b; margin-bottom:18px;">
+      🌐 <b>Mode Online:</b> Setelah Firebase dikonfigurasi, status slot disimpan di database online.
+      Artinya HP siswa dan HP penjaga dapat melihat status parkir yang sama secara real-time.
+      <br><small>Jika tulisan masih “Database belum terhubung”, isi konfigurasi Firebase pada kode.</small>
+    </div>
+
+    <div class="notice" id="notice">
+      💡 <b>Solusi:</b> Siswa dapat melihat slot kosong terlebih dahulu sehingga tidak perlu berputar-putar mencari tempat parkir.
+    </div>
+  </section>
+
+<section class="hero">
+  <h2>📘 Cara Mengaktifkan Versi Online</h2>
+  <ol style="line-height:1.8;">
+    <li>Buat project baru di <b>Firebase</b>.</li>
+    <li>Aktifkan <b>Realtime Database</b>.</li>
+    <li>Tambahkan aplikasi Web dan salin <b>firebaseConfig</b>.</li>
+    <li>Ganti nilai <b>ISI_...</b> pada bagian konfigurasi Firebase di file ini.</li>
+    <li>Upload file ke hosting (misalnya GitHub Pages, Netlify, atau Firebase Hosting).</li>
+    <li>Bagikan link website atau buat QR Code untuk siswa.</li>
+  </ol>
+  <p><b>Catatan:</b> PIN Restart tetap digunakan di sisi halaman. Untuk penggunaan sekolah yang serius,
+  akses penjaga sebaiknya ditingkatkan menjadi login Firebase agar PIN tidak terlihat di source code.</p>
+</section>
+
+</main>
+
+
+<div class="modal" id="resetModal" aria-hidden="true">
+  <div class="modal-card">
+    <h3>🔐 Akses Penjaga / Pemilik</h3>
+    <p>Masukkan PIN untuk menggunakan tombol Restart / Reset parkiran.</p>
+    <input id="ownerPin" type="password" inputmode="numeric" maxlength="6"
+           placeholder="Masukkan PIN" style="width:100%; margin-top:5px;">
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeResetModal()">Batal</button>
+      <button class="danger-btn" onclick="verifyReset()">Restart</button>
+    </div>
+    <p id="pinMessage" style="margin:12px 0 0; color:#c0392b; display:none;">
+      PIN salah. Silakan coba lagi.
+    </p>
+  </div>
+</div>
+
+<footer>
+  Prototype tugas Berpikir Komputasional — Kelompok 7 | X AKL<br>🔐 Restart / Reset khusus penjaga parkir atau pemilik
+</footer>
+
+
+  <!-- Firebase: database online agar status parkir bisa dilihat dari banyak HP -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import {
+      getDatabase, ref, onValue, set, update
+    } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+    /*
+      ============================================================
+      KONFIGURASI FIREBASE
+      ============================================================
+      1. Buat project di Firebase.
+      2. Aktifkan Realtime Database.
+      3. Buat Web App.
+      4. Salin firebaseConfig dari Firebase ke bagian di bawah.
+    */
+    const firebaseConfig = {
+      apiKey: "ISI_API_KEY",
+      authDomain: "ISI_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://ISI_PROJECT_ID-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ISI_PROJECT_ID",
+      storageBucket: "ISI_PROJECT_ID.firebasestorage.app",
+      messagingSenderId: "ISI_MESSAGING_SENDER_ID",
+      appId: "ISI_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const parkingRef = ref(db, "parkirku/slots");
+
+    window.__firebase = { db, parkingRef, onValue, set, update };
+
+    // Sinkronisasi real-time: setiap HP mendengarkan database yang sama.
+    onValue(parkingRef, (snapshot) => {
+      const data = snapshot.val();
+
+      if (Array.isArray(data) && data.length === 40) {
+        slots = data;
+      } else if (data && typeof data === "object") {
+        const ordered = [];
+        rows.forEach(row => {
+          for (let i = 1; i <= 10; i++) {
+            const id = row + i;
+            const found = data[id];
+            ordered.push({
+              id,
+              state: found && found.state ? found.state : STATES.EMPTY
+            });
+          }
+        });
+        slots = ordered;
+      }
+
+      render();
+      document.getElementById("notice").innerHTML =
+        "🌐 <b>Terhubung ke database online.</b> Status parkir disinkronkan ke semua HP.";
+    }, (error) => {
+      console.error(error);
+      document.getElementById("notice").innerHTML =
+        "⚠️ <b>Database belum terhubung.</b> Periksa konfigurasi Firebase.";
+    });
+
+    window.saveOnline = async function() {
+      const payload = {};
+      slots.forEach(s => payload[s.id] = { state: s.state });
+      await update(parkingRef, payload);
+    };
+
+    window.resetOnline = async function() {
+      const payload = {};
+      slots.forEach(s => payload[s.id] = { state: STATES.EMPTY });
+      await set(parkingRef, payload);
+    };
+  </script>
+
+<script>
+const rows = ["A","B","C","D"];
+let slots = [];
+const STATES = {
+  EMPTY: "empty",
+  OCCUPIED: "occupied",
+  SELECTED: "selected"
+};
+
+const STORAGE_KEY = "parkirku_status_v1";
+const OWNER_PIN = "123456"; // Ganti PIN ini sesuai keinginan penjaga/pemilik.
+
+function createSlots() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length === 40) {
+        slots = parsed;
+        render();
+        document.getElementById("notice").innerHTML =
+          "💾 <b>Data parkir sebelumnya berhasil dimuat.</b> Perubahan akan tersimpan otomatis.";
+        return;
+      }
+    } catch (e) {
+      console.warn("Data tersimpan tidak valid, membuat data baru.");
+    }
+  }
+
+  slots = [];
+  rows.forEach(row => {
+    for (let i=1; i<=10; i++) {
+      slots.push({id: row+i, state: STATES.EMPTY});
+    }
+  });
+  saveSlots();
+  render();
+}
+
+function saveSlots() {
+  // Cache lokal tetap disimpan sebagai cadangan.
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(slots));
+
+  // Jika Firebase aktif, kirim perubahan ke database online.
+  if (window.saveOnline) {
+    window.saveOnline().catch(err => {
+      console.error("Gagal menyimpan ke database online:", err);
+    });
+  }
+}
+
+function render() {
+  const parking = document.getElementById("parking");
+  const filter = document.getElementById("filter").value;
+  const search = document.getElementById("search").value.toLowerCase().trim();
+  parking.innerHTML = "";
+
+  rows.forEach(row => {
+    const lane = document.createElement("div");
+    lane.className = "lane";
+
+    slots.filter(s => s.id.startsWith(row)).forEach(s => {
+      const visible =
+        (filter === "all" ||
+         (filter === "free" && s.state === STATES.EMPTY) ||
+         (filter === "used" && s.state === STATES.OCCUPIED)) &&
+        s.id.toLowerCase().includes(search);
+
+      const el = document.createElement("div");
+      const stateClass = s.state === STATES.OCCUPIED ? "used" : "free";
+      const stateText = s.state === STATES.OCCUPIED ? "Terisi" : "Kosong";
+
+      el.className = "slot " + stateClass;
+      if (!visible) el.style.display = "none";
+      el.innerHTML = `<div>${s.id}</div><small>${stateText}</small>`;
+
+      el.onclick = () => {
+        // Klik slot untuk berganti status: kosong <-> terisi.
+        if (s.state === STATES.OCCUPIED) {
+          s.state = STATES.EMPTY;
+          document.getElementById("notice").innerHTML =
+            `↩️ <b>Slot ${s.id} sekarang kosong lagi.</b>`;
+        } else {
+          s.state = STATES.OCCUPIED;
+          document.getElementById("notice").innerHTML =
+            `🅿️ <b>Slot ${s.id} sekarang terisi.</b>`;
+        }
+        saveSlots();
+        render();
+      };
+      lane.appendChild(el);
+    });
+    parking.appendChild(lane);
+
+    const aisle = document.createElement("div");
+    aisle.className = "aisle";
+    aisle.textContent = "↕ JALUR KELUAR / MASUK ↕";
+    parking.appendChild(aisle);
+  });
+
+  updateStats();
+}
+
+function updateStats() {
+  const free = slots.filter(s => s.state === STATES.EMPTY).length;
+  const used = slots.filter(s => s.state === STATES.OCCUPIED).length;
+  document.getElementById("total").textContent = slots.length;
+  document.getElementById("free").textContent = free;
+  document.getElementById("used").textContent = used;
+
+  // Tombol reset selalu tersedia, tetapi aksesnya dilindungi PIN.
+  const resetBtn = document.getElementById("resetBtn");
+  resetBtn.disabled = false;
+  resetBtn.style.display = "inline-block";
+}
+
+function randomize() {
+  slots.forEach(s => s.state = Math.random() < 0.58 ? STATES.OCCUPIED : STATES.EMPTY);
+  saveSlots();
+  document.getElementById("notice").innerHTML =
+    "🔄 <b>Kondisi parkir diperbarui.</b> Data tersimpan otomatis.";
+  render();
+}
+
+function requestReset() {
+  document.getElementById("ownerPin").value = "";
+  document.getElementById("pinMessage").style.display = "none";
+  document.getElementById("resetModal").classList.add("show");
+  document.getElementById("resetModal").setAttribute("aria-hidden", "false");
+  setTimeout(() => document.getElementById("ownerPin").focus(), 50);
+}
+
+function closeResetModal() {
+  document.getElementById("resetModal").classList.remove("show");
+  document.getElementById("resetModal").setAttribute("aria-hidden", "true");
+}
+
+function verifyReset() {
+  const pin = document.getElementById("ownerPin").value;
+  const message = document.getElementById("pinMessage");
+
+  if (pin !== OWNER_PIN) {
+    message.style.display = "block";
+    return;
+  }
+
+  closeResetModal();
+  resetParking();
+}
+
+async function resetParking() {
+  slots.forEach(s => s.state = STATES.EMPTY);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(slots));
+
+  if (window.resetOnline) {
+    try {
+      await window.resetOnline();
+    } catch (err) {
+      console.error("Gagal mereset database online:", err);
+    }
+  }
+
+  document.getElementById("notice").innerHTML =
+    "🔄 <b>Parkiran berhasil di-restart.</b> Semua HP akan menerima kondisi kosong.";
+  render();
+}
+
+document.getElementById("ownerPin").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") verifyReset();
+});
+
+document.getElementById("resetModal").addEventListener("click", function(e) {
+  if (e.target === this) closeResetModal();
+});
+
+document.getElementById("filter").addEventListener("change", render);
+document.getElementById("search").addEventListener("input", render);
+
+createSlots();
+</script>
+</body>
+</html>
